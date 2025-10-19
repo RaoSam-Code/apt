@@ -1,33 +1,43 @@
-name: Deploy to GitHub Pages
-
-on:
-  workflow_run:
-    workflows: ["Frontend CI"]
-    types:
-      - completed
-    branches:
-      - main
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-
-    steps:
+steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-
-    - name: Download build artifact
-      uses: actions/download-artifact@v4
+  
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+  
+    - name: Install dependencies
+      run: npm install --legacy-peer-deps
+      working-directory: frontend/
+  
+    - name: Build frontend
+      run: npm run build
+      working-directory: frontend/
+  
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4
       with:
         name: frontend-build
         path: frontend/dist/
-
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v4
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: frontend/dist/
-        # The following line is important for single-page applications (like React apps)
-        # It ensures that all routes are handled by index.html
-        # cname: example.com # Uncomment and set your custom domain if needed
+        deploy: name: Deploy to GitHub Pages needs: build runs-on: ubuntu-latest if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.build.result == 'success' }}
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+          
+            - name: Download build artifact
+              uses: actions/download-artifact@v4
+              with:
+                name: frontend-build
+                path: frontend/dist/
+          
+            - name: Show artifact contents (debug)
+              run: |
+                echo "Contents of frontend/dist:"
+                ls -la frontend/dist || true
+          
+            - name: Deploy to GitHub Pages
+              uses: peaceiris/actions-gh-pages@v4
+              with:
+                github_token: ${{ secrets.GITHUB_TOKEN }}
+                publish_dir: frontend/dist/
