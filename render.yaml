@@ -2,8 +2,8 @@ services:
   - type: web
     name: apt-backend
     env: node
-    buildCommand: npm install --legacy-peer-deps
-    startCommand: npm start
+    buildCommand: npm install --legacy-peer-deps && curl -sSL https://aptos.dev/aptos-cli/install.sh | bash
+    startCommand: export PATH="$HOME/.aptos/bin:$PATH" && npm start
     rootDir: backend/
     healthCheckPath: / # Assuming your backend has a root endpoint, adjust if needed
     plan: free # Use the free tier
