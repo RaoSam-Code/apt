@@ -207,13 +207,27 @@ app.post('/deploy-visual', async (req, res) => {
     await fs.ensureDir(tempDir);
     await fs.ensureDir(path.join(tempDir, 'sources'));
 
+    const moveFileNames = {
+      'fungible_token': 'my_token.move',
+      'nft': 'my_nft.move',
+      'dao': 'my_dao.move',
+      'staking': 'my_staking.move',
+      'capped_fungible_token': 'my_capped_token.move',
+      'governance': 'my_governance.move',
+      'lending_pool': 'my_lending_pool.move',
+    };
+
     let combinedCode = `module ${ownerAddress}::my_module {\n`;
     let combinedToml = `[package]\nname = "MyModule"\nversion = "1.0.0"\nauthors = ["dApp Builder"]\n\n[addresses]\nowner = "${ownerAddress}"\n\n[dependencies]\nAptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-framework", rev = "main" }\n`;
 
     for (const component of components) {
       const componentType = component.toLowerCase().replace(' ', '_');
       const templatePath = path.join(__dirname, 'templates', componentType);
-      const moveCode = await fs.readFile(path.join(templatePath, 'sources', `my_${componentType}.move`), 'utf8');
+      const moveFileName = moveFileNames[componentType];
+      if (!moveFileName) {
+        throw new Error(`Unknown component type: ${componentType}`);
+      }
+      const moveCode = await fs.readFile(path.join(templatePath, 'sources', moveFileName), 'utf8');
       combinedCode += moveCode.substring(moveCode.indexOf('{') + 1, moveCode.lastIndexOf('}'));
 
       const moveToml = await fs.readFile(path.join(templatePath, 'Move.toml'), 'utf8');
