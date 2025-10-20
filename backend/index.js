@@ -17,6 +17,9 @@ db.serialize(() => {
   db.run("CREATE TABLE IF NOT EXISTS projects (id INTEGER PRIMARY KEY AUTOINCREMENT, ownerAddress TEXT, type TEXT, name TEXT, transactionHash TEXT)");
 });
 
+app.get('/',async (req,res)=>{
+  return res("I hope you are not alone\n But if you are\n Then remember of last year you spent in your school and first Flight you had")
+})
 app.post('/deploy', async (req, res) => {
   const { name, symbol, decimals, supply, ownerAddress } = req.body;
 

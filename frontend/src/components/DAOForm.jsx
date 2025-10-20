@@ -16,7 +16,7 @@ export default function DAOForm() {
     setIsDeploying(true);
 
     try {
-      const response = await fetch("http://localhost:3001/deploy-dao", {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/deploy-dao`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

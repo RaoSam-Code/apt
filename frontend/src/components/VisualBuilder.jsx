@@ -24,7 +24,7 @@ export default function VisualBuilder() {
     setIsDeploying(true);
 
     try {
-      const response = await fetch('http://localhost:3001/deploy-visual', {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/deploy-visual`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

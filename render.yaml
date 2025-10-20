@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: apt-backend
+    env: node
+    buildCommand: npm install --legacy-peer-deps
+    startCommand: npm start
+    rootDir: backend/
+    healthCheckPath: / # Assuming your backend has a root endpoint, adjust if needed
+    plan: free # Use the free tier
+    # Environment variables can be added here or in the Render dashboard
+    # envVars:
+    #   - key: DATABASE_URL
+    #     value: your_database_url_here

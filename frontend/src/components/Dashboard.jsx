@@ -7,7 +7,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (connected) {
-      fetch(`http://localhost:3001/projects/${account.address}`)
+      fetch(`${import.meta.env.VITE_BACKEND_URL}/projects/${account.address}`)
         .then((res) => res.json())
         .then((data) => setProjects(data))
         .catch((err) => console.error("Error fetching projects:", err));
@@ -29,7 +29,7 @@ export default function Dashboard() {
               >
                 View Transaction
               </a>
-              <button onClick={() => window.location.href = `http://localhost:3001/generate-frontend/${project.id}`}>
+              <button onClick={() => window.location.href = `${import.meta.env.VITE_BACKEND_URL}/generate-frontend/${project.id}`}>
                 Download Frontend
               </button>
             </li>

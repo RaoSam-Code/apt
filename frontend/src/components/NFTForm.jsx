@@ -17,7 +17,7 @@ export default function NFTForm() {
     setIsDeploying(true);
 
     try {
-      const response = await fetch("http://localhost:3001/deploy-nft", {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/deploy-nft`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -18,7 +18,7 @@ export default function TokenForm() {
     setIsDeploying(true);
 
     try {
-      const response = await fetch("http://localhost:3001/deploy", {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/deploy`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
