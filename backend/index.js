@@ -17,132 +17,98 @@ db.serialize(() => {
   db.run("CREATE TABLE IF NOT EXISTS projects (id INTEGER PRIMARY KEY AUTOINCREMENT, ownerAddress TEXT, type TEXT, name TEXT, transactionHash TEXT)");
 });
 
-app.get('/',async (_req,res)=>{
-  return res("I hope you are not alone\n But if you are\n Then remember of last year you spent in your school and first Flight you had");
-})
-app.post('/deploy', async (req, res) => {
-  const { name, symbol, decimals, supply, ownerAddress } = req.body;
+app.get('/', (_req, res) => {
+  res.json({ message: "I hope you are not alone. But if you are, then remember the last year you spent in your school and the first flight you had." });
+});
+const deployModule = async (req, res, moduleConfig) => {
+  const { ownerAddress } = req.body;
+  const { requiredFields, templateName, moveFileName, replacements, tomlAddressName, dbType, successMessage, errorMessage } = moduleConfig;
 
-  if (!name || !symbol || !decimals || !supply || !ownerAddress) {
+  if (!ownerAddress || requiredFields.some(field => !req.body[field])) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
   const tempDir = path.join(__dirname, 'temp', Date.now().toString());
 
   try {
-    // 1. Create a temporary directory
     await fs.ensureDir(tempDir);
+    await fs.copy(path.join(__dirname, 'templates', templateName), tempDir);
 
-    // 2. Copy the Move template
-    await fs.copy(path.join(__dirname, 'templates', 'fungible_token'), tempDir);
-
-    // 3. Replace placeholders in the Move template
-    const moveTemplatePath = path.join(tempDir, 'sources', 'my_token.move');
+    const moveTemplatePath = path.join(tempDir, 'sources', moveFileName);
     let moveTemplate = await fs.readFile(moveTemplatePath, 'utf8');
-    moveTemplate = moveTemplate.replace(/{{TOKEN_NAME}}/g, name);
-    moveTemplate = moveTemplate.replace(/{{TOKEN_SYMBOL}}/g, symbol);
-    moveTemplate = moveTemplate.replace(/{{TOKEN_DECIMALS}}/g, decimals);
-    moveTemplate = moveTemplate.replace(/{{TOKEN_SUPPLY}}/g, supply);
+    for (const replacement of replacements) {
+      moveTemplate = moveTemplate.replace(new RegExp(replacement.search, 'g'), req.body[replacement.replace]);
+    }
     await fs.writeFile(moveTemplatePath, moveTemplate);
 
-    // 4. Update Move.toml with the owner's address
     const moveTomlPath = path.join(tempDir, 'Move.toml');
     let moveToml = await fs.readFile(moveTomlPath, 'utf8');
-    moveToml = moveToml.replace(/token_owner = "0x0"/g, `token_owner = "${ownerAddress}"`);
+    moveToml = moveToml.replace(new RegExp(`${tomlAddressName} = "0x0"`, 'g'), `${tomlAddressName} = "${ownerAddress}"`);
     await fs.writeFile(moveTomlPath, moveToml);
 
-    // 5. Compile the Move code
-    await execa('aptos', ['move', 'compile', '--named-addresses', `token_owner=${ownerAddress}`], { cwd: tempDir });
+    await execa('aptos', ['move', 'compile', '--named-addresses', `${tomlAddressName}=${ownerAddress}`], { cwd: tempDir });
 
-    // 6. Publish the compiled module
-    const { stdout } = await execa('aptos', ['move', 'publish', '--named-addresses', `token_owner=${ownerAddress}`, '--assume-yes'], { cwd: tempDir });
+    const { stdout } = await execa('aptos', ['move', 'publish', '--named-addresses', `${tomlAddressName}=${ownerAddress}`, '--assume-yes'], { cwd: tempDir });
 
-    db.run("INSERT INTO projects (ownerAddress, type, name, transactionHash) VALUES (?, ?, ?, ?)", [ownerAddress, 'token', name, stdout]);
-    res.json({ message: 'Deployment successful!', transaction: stdout });
+    db.run("INSERT INTO projects (ownerAddress, type, name, transactionHash) VALUES (?, ?, ?, ?)", [ownerAddress, dbType, req.body.name, stdout]);
+    res.json({ message: successMessage, transaction: stdout });
   } catch (error) {
-    console.error('Deployment failed:', error);
-    res.status(500).json({ error: 'Deployment failed', details: error.message });
+    console.error(`${errorMessage}:`, error);
+    res.status(500).json({ error: errorMessage, details: error.message });
   } finally {
-    // Clean up the temporary directory
     await fs.remove(tempDir);
   }
+};
+
+app.post('/deploy', (req, res) => {
+  deployModule(req, res, {
+    requiredFields: ['name', 'symbol', 'decimals', 'supply'],
+    templateName: 'fungible_token',
+    moveFileName: 'my_token.move',
+    replacements: [
+      { search: '{{TOKEN_NAME}}', replace: 'name' },
+      { search: '{{TOKEN_SYMBOL}}', replace: 'symbol' },
+      { search: '{{TOKEN_DECIMALS}}', replace: 'decimals' },
+      { search: '{{TOKEN_SUPPLY}}', replace: 'supply' }
+    ],
+    tomlAddressName: 'token_owner',
+    dbType: 'token',
+    successMessage: 'Deployment successful!',
+    errorMessage: 'Deployment failed'
+  });
 });
 
-app.post('/deploy-nft', async (req, res) => {
-  const { name, description, uri, ownerAddress } = req.body;
-
-  if (!name || !description || !uri || !ownerAddress) {
-    return res.status(400).json({ error: 'Missing required fields' });
-  }
-
-  const tempDir = path.join(__dirname, 'temp', Date.now().toString());
-
-  try {
-    await fs.ensureDir(tempDir);
-    await fs.copy(path.join(__dirname, 'templates', 'nft'), tempDir);
-
-    const moveTemplatePath = path.join(tempDir, 'sources', 'my_nft.move');
-    let moveTemplate = await fs.readFile(moveTemplatePath, 'utf8');
-    moveTemplate = moveTemplate.replace(/{{COLLECTION_NAME}}/g, name);
-    moveTemplate = moveTemplate.replace(/{{COLLECTION_DESCRIPTION}}/g, description);
-    moveTemplate = moveTemplate.replace(/{{COLLECTION_URI}}/g, uri);
-    await fs.writeFile(moveTemplatePath, moveTemplate);
-
-    const moveTomlPath = path.join(tempDir, 'Move.toml');
-    let moveToml = await fs.readFile(moveTomlPath, 'utf8');
-    moveToml = moveToml.replace(/nft_owner = "0x0"/g, `nft_owner = "${ownerAddress}"`);
-    await fs.writeFile(moveTomlPath, moveToml);
-
-    await execa('aptos', ['move', 'compile', '--named-addresses', `nft_owner=${ownerAddress}`], { cwd: tempDir });
-
-    const { stdout } = await execa('aptos', ['move', 'publish', '--named-addresses', `nft_owner=${ownerAddress}`, '--assume-yes'], { cwd: tempDir });
-
-    db.run("INSERT INTO projects (ownerAddress, type, name, transactionHash) VALUES (?, ?, ?, ?)", [ownerAddress, 'nft', name, stdout]);
-    res.json({ message: 'NFT Collection deployment successful!', transaction: stdout });
-  } catch (error) {
-    console.error('NFT Deployment failed:', error);
-    res.status(500).json({ error: 'NFT Deployment failed', details: error.message });
-  } finally {
-    await fs.remove(tempDir);
-  }
+app.post('/deploy-nft', (req, res) => {
+  deployModule(req, res, {
+    requiredFields: ['name', 'description', 'uri'],
+    templateName: 'nft',
+    moveFileName: 'my_nft.move',
+    replacements: [
+      { search: '{{COLLECTION_NAME}}', replace: 'name' },
+      { search: '{{COLLECTION_DESCRIPTION}}', replace: 'description' },
+      { search: '{{COLLECTION_URI}}', replace: 'uri' }
+    ],
+    tomlAddressName: 'nft_owner',
+    dbType: 'nft',
+    successMessage: 'NFT Collection deployment successful!',
+    errorMessage: 'NFT Deployment failed'
+  });
 });
 
-app.post('/deploy-dao', async (req, res) => {
-  const { name, delay, ownerAddress } = req.body;
-
-  if (!name || !delay || !ownerAddress) {
-    return res.status(400).json({ error: 'Missing required fields' });
-  }
-
-  const tempDir = path.join(__dirname, 'temp', Date.now().toString());
-
-  try {
-    await fs.ensureDir(tempDir);
-    await fs.copy(path.join(__dirname, 'templates', 'dao'), tempDir);
-
-    const moveTemplatePath = path.join(tempDir, 'sources', 'my_dao.move');
-    let moveTemplate = await fs.readFile(moveTemplatePath, 'utf8');
-    moveTemplate = moveTemplate.replace(/{{DAO_NAME}}/g, name);
-    moveTemplate = moveTemplate.replace(/{{PROPOSAL_DELAY}}/g, delay);
-    await fs.writeFile(moveTemplatePath, moveTemplate);
-
-    const moveTomlPath = path.join(tempDir, 'Move.toml');
-    let moveToml = await fs.readFile(moveTomlPath, 'utf8');
-    moveToml = moveToml.replace(/dao_owner = "0x0"/g, `dao_owner = "${ownerAddress}"`);
-    await fs.writeFile(moveTomlPath, moveToml);
-
-    await execa('aptos', ['move', 'compile', '--named-addresses', `dao_owner=${ownerAddress}`], { cwd: tempDir });
-
-    const { stdout } = await execa('aptos', ['move', 'publish', '--named-addresses', `dao_owner=${ownerAddress}`, '--assume-yes'], { cwd: tempDir });
-
-    db.run("INSERT INTO projects (ownerAddress, type, name, transactionHash) VALUES (?, ?, ?, ?)", [ownerAddress, 'dao', name, stdout]);
-    res.json({ message: 'DAO deployment successful!', transaction: stdout });
-  } catch (error) {
-    console.error('DAO Deployment failed:', error);
-    res.status(500).json({ error: 'DAO Deployment failed', details: error.message });
-  } finally {
-    await fs.remove(tempDir);
-  }
+app.post('/deploy-dao', (req, res) => {
+  deployModule(req, res, {
+    requiredFields: ['name', 'delay'],
+    templateName: 'dao',
+    moveFileName: 'my_dao.move',
+    replacements: [
+      { search: '{{DAO_NAME}}', replace: 'name' },
+      { search: '{{PROPOSAL_DELAY}}', replace: 'delay' }
+    ],
+    tomlAddressName: 'dao_owner',
+    dbType: 'dao',
+    successMessage: 'DAO deployment successful!',
+    errorMessage: 'DAO Deployment failed'
+  });
 });
 
 app.get('/projects/:ownerAddress', (req, res) => {
@@ -156,6 +122,46 @@ app.get('/projects/:ownerAddress', (req, res) => {
   });
 });
 
+app.get('/project/:id', (req, res) => {
+  const { id } = req.params;
+  db.get("SELECT * FROM projects WHERE id = ?", [id], (err, row) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    if (!row) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+    res.json(row);
+  });
+});
+
+const frontendTemplates = {
+  token: {
+    path: 'token/TokenComponent.jsx',
+    replacements: [
+      { search: /{{MODULE_ADDRESS}}/g, value: 'ownerAddress' },
+      { search: /{{TOKEN_NAME}}/g, value: 'name' },
+      { search: /{{TOKEN_SYMBOL}}/g, value: 'name' }
+    ]
+  },
+  nft: {
+    path: 'nft/NFTComponent.jsx',
+    replacements: [
+      { search: /{{MODULE_ADDRESS}}/g, value: 'ownerAddress' },
+      { search: /{{COLLECTION_NAME}}/g, value: 'name' }
+    ]
+  },
+  dao: {
+    path: 'dao/DAOComponent.jsx',
+    replacements: [
+      { search: /{{MODULE_ADDRESS}}/g, value: 'ownerAddress' },
+      { search: /{{DAO_NAME}}/g, value: 'name' }
+    ]
+  }
+};
+
 app.get('/generate-frontend/:projectId', (req, res) => {
   const { projectId } = req.params;
   db.get("SELECT * FROM projects WHERE id = ?", [projectId], async (err, project) => {
@@ -167,31 +173,23 @@ app.get('/generate-frontend/:projectId', (req, res) => {
       return res.status(404).json({ error: "Project not found" });
     }
 
+    const templateConfig = frontendTemplates[project.type];
+    if (!templateConfig) {
+      return res.status(400).json({ error: "Invalid project type" });
+    }
+
     const zip = archiver('zip');
     res.attachment('frontend-components.zip');
     zip.pipe(res);
 
-    if (project.type === 'token') {
-      const templatePath = path.join(__dirname, 'templates', 'frontend', 'token', 'TokenComponent.jsx');
-      let template = await fs.readFile(templatePath, 'utf8');
-      template = template.replace(/{{MODULE_ADDRESS}}/g, project.ownerAddress);
-      template = template.replace(/{{TOKEN_NAME}}/g, project.name);
-      template = template.replace(/{{TOKEN_SYMBOL}}/g, project.name); // Assuming symbol is same as name for now
-      zip.append(template, { name: 'TokenComponent.jsx' });
-    } else if (project.type === 'nft') {
-      const templatePath = path.join(__dirname, 'templates', 'frontend', 'nft', 'NFTComponent.jsx');
-      let template = await fs.readFile(templatePath, 'utf8');
-      template = template.replace(/{{MODULE_ADDRESS}}/g, project.ownerAddress);
-      template = template.replace(/{{COLLECTION_NAME}}/g, project.name);
-      zip.append(template, { name: 'NFTComponent.jsx' });
-    } else if (project.type === 'dao') {
-      const templatePath = path.join(__dirname, 'templates', 'frontend', 'dao', 'DAOComponent.jsx');
-      let template = await fs.readFile(templatePath, 'utf8');
-      template = template.replace(/{{MODULE_ADDRESS}}/g, project.ownerAddress);
-      template = template.replace(/{{DAO_NAME}}/g, project.name);
-      zip.append(template, { name: 'DAOComponent.jsx' });
+    const templatePath = path.join(__dirname, 'templates', 'frontend', templateConfig.path);
+    let template = await fs.readFile(templatePath, 'utf8');
+
+    for (const replacement of templateConfig.replacements) {
+      template = template.replace(replacement.search, project[replacement.value]);
     }
 
+    zip.append(template, { name: path.basename(templateConfig.path) });
     zip.finalize();
   });
 });
@@ -241,41 +239,19 @@ app.post('/deploy-visual', async (req, res) => {
   }
 });
 
-app.post('/deploy-staking', async (req, res) => {
-  const { tokenModuleAddress, ownerAddress } = req.body;
-
-  if (!tokenModuleAddress || !ownerAddress) {
-    return res.status(400).json({ error: 'Missing required fields' });
-  }
-
-  const tempDir = path.join(__dirname, 'temp', Date.now().toString());
-
-  try {
-    await fs.ensureDir(tempDir);
-    await fs.copy(path.join(__dirname, 'templates', 'staking'), tempDir);
-
-    const moveTemplatePath = path.join(tempDir, 'sources', 'my_staking.move');
-    let moveTemplate = await fs.readFile(moveTemplatePath, 'utf8');
-    moveTemplate = moveTemplate.replace(/{{TOKEN_MODULE_ADDRESS}}/g, tokenModuleAddress);
-    await fs.writeFile(moveTemplatePath, moveTemplate);
-
-    const moveTomlPath = path.join(tempDir, 'Move.toml');
-    let moveToml = await fs.readFile(moveTomlPath, 'utf8');
-    moveToml = moveToml.replace(/staking_owner = "0x0"/g, `staking_owner = "${ownerAddress}"`);
-    await fs.writeFile(moveTomlPath, moveToml);
-
-    await execa('aptos', ['move', 'compile', '--named-addresses', `staking_owner=${ownerAddress}`], { cwd: tempDir });
-
-    const { stdout } = await execa('aptos', ['move', 'publish', '--named-addresses', `staking_owner=${ownerAddress}`, '--assume-yes'], { cwd: tempDir });
-
-    db.run("INSERT INTO projects (ownerAddress, type, name, transactionHash) VALUES (?, ?, ?, ?)", [ownerAddress, 'staking', 'My Staking Contract', stdout]);
-    res.json({ message: 'Staking contract deployment successful!', transaction: stdout });
-  } catch (error) {
-    console.error('Staking deployment failed:', error);
-    res.status(500).json({ error: 'Staking deployment failed', details: error.message });
-  } finally {
-    await fs.remove(tempDir);
-  }
+app.post('/deploy-staking', (req, res) => {
+  deployModule(req, res, {
+    requiredFields: ['tokenModuleAddress'],
+    templateName: 'staking',
+    moveFileName: 'my_staking.move',
+    replacements: [
+      { search: '{{TOKEN_MODULE_ADDRESS}}', replace: 'tokenModuleAddress' }
+    ],
+    tomlAddressName: 'staking_owner',
+    dbType: 'staking',
+    successMessage: 'Staking contract deployment successful!',
+    errorMessage: 'Staking deployment failed'
+  });
 });
 
 app.listen(PORT, () => {
