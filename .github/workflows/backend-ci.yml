@@ -26,7 +26,8 @@ jobs:
           cache-dependency-path: 'backend/package-lock.json'
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
+
 
       - name: Run tests (if any)
         # You would typically have a test script defined in your backend/package.json
