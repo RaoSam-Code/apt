@@ -215,6 +215,8 @@ app.post('/deploy-visual', async (req, res) => {
       'capped_fungible_token': 'my_capped_token.move',
       'governance': 'my_governance.move',
       'lending_pool': 'my_lending_pool.move',
+      'vesting_contract': 'my_vesting_contract.move',
+      'yield_farm': 'my_yield_farm.move',
     };
 
     let combinedCode = `module ${ownerAddress}::my_module {\n`;
@@ -265,6 +267,54 @@ app.post('/deploy-staking', (req, res) => {
     dbType: 'staking',
     successMessage: 'Staking contract deployment successful!',
     errorMessage: 'Staking deployment failed'
+  });
+});
+
+app.post('/deploy-vesting', (req, res) => {
+  deployModule(req, res, {
+    requiredFields: ['beneficiary', 'startTime', 'duration'],
+    templateName: 'vesting_contract',
+    moveFileName: 'my_vesting_contract.move',
+    replacements: [
+      { search: '{{BENEFICIARY}}', replace: 'beneficiary' },
+      { search: '{{START_TIME}}', replace: 'startTime' },
+      { search: '{{DURATION}}', replace: 'duration' }
+    ],
+    tomlAddressName: 'vesting_owner',
+    dbType: 'vesting',
+    successMessage: 'Vesting contract deployment successful!',
+    errorMessage: 'Vesting contract deployment failed'
+  });
+});
+
+app.post('/deploy-yield-farm', (req, res) => {
+  deployModule(req, res, {
+    requiredFields: ['rewardRate'],
+    templateName: 'yield_farm',
+    moveFileName: 'my_yield_farm.move',
+    replacements: [
+      { search: '{{REWARD_RATE}}', replace: 'rewardRate' }
+    ],
+    tomlAddressName: 'yield_farm_owner',
+    dbType: 'yield_farm',
+    successMessage: 'Yield farm deployment successful!',
+    errorMessage: 'Yield farm deployment failed'
+  });
+});
+
+app.post('/deploy-liquidity-pool', (req, res) => {
+  deployModule(req, res, {
+    requiredFields: ['tokenA', 'tokenB'],
+    templateName: 'liquidity_pool',
+    moveFileName: 'my_liquidity_pool.move',
+    replacements: [
+      { search: '{{TOKEN_A}}', replace: 'tokenA' },
+      { search: '{{TOKEN_B}}', replace: 'tokenB' }
+    ],
+    tomlAddressName: 'liquidity_pool_owner',
+    dbType: 'liquidity_pool',
+    successMessage: 'Liquidity pool deployment successful!',
+    errorMessage: 'Liquidity pool deployment failed'
   });
 });
 

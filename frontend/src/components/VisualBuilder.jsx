@@ -4,10 +4,24 @@ import { useWallet } from '@aptos-labs/wallet-adapter-react';
 import Draggable from './Draggable';
 import Droppable from './Droppable';
 
+const templates = [
+  "Fungible Token", "NFT Collection", "DAO", "Staking", "Vesting Contract", "Yield Farm", "Liquidity Pool", "Lottery", "Escrow", "Multi-sig Wallet",
+  "Crowdsale", "Auction", "Governance Token", "Utility Token", "Security Token", "Stablecoin", "Wrapped Asset", "Decentralized Exchange (DEX)", "Automated Market Maker (AMM)", "Lending Protocol",
+  "Borrowing Protocol", "Insurance Protocol", "Prediction Market", "Identity Management", "Reputation System", "Voting System", "Registry", "Notary", "Time-locking", "Asset Tokenization",
+  "Real Estate Token", "Art Token", "Music NFT", "Gaming NFT", "Collectible NFT", "Domain Name Service", "Decentralized Storage", "Decentralized Cloud Computing", "Social Media Platform", "Messaging App",
+  "Supply Chain Management", "Healthcare Records", "Digital Will", "Charity/Donation System", "Subscription Service", "Loyalty Program", "Ticketing System", "Coupon System", "Referral Program", "Affiliate Program",
+  "Bounty Program", "Job Market", "Freelance Platform", "Review System", "Decentralized Identity", "Know Your Customer (KYC)", "Anti-Money Laundering (AML)", "Credit Scoring", "Microloans",
+  "Peer-to-Peer Lending", "Index Fund", "Portfolio Management", "Asset Management", "Derivatives Trading", "Options Trading", "Futures Trading", "Synthetic Assets", "Oracles", "Bridges",
+  "Cross-chain Swaps", "Layer 2 Scaling", "State Channels", "Sidechains", "Plasma", "Rollups", "Zero-knowledge Proofs", "Privacy Coin", "Mixer", "Confidential Transactions",
+  "Decentralized Autonomous Organization (DAO) Tooling", "Proposal Management", "Treasury Management", "Token Curated Registry", "Flash Loans", "Rebalancing Pool", "Impermanent Loss Protection", "NFT Marketplace", "NFT Minting", "NFT Fractionalization",
+  "NFT Lending", "NFT Staking", "Generative Art", "Interactive NFT", "Dynamic NFT", "Music Streaming", "Video Streaming", "Decentralized Science (DeSci)", "Research Funding", "Intellectual Property (IP) Management"
+];
+
 export default function VisualBuilder() {
   const { connected, account } = useWallet();
   const [droppedItems, setDroppedItems] = useState([]);
   const [isDeploying, setIsDeploying] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleDragEnd = (event) => {
     if (event.over) {
@@ -50,23 +64,27 @@ export default function VisualBuilder() {
     }
   };
 
+  const filteredTemplates = templates.filter(template =>
+    template.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <DndContext onDragEnd={handleDragEnd}>
       <div className="visual-builder">
         <div className="sidebar">
           <h3>Components</h3>
-          <Draggable id="Fungible Token">
-            <div className="draggable-item">Fungible Token</div>
-          </Draggable>
-          <Draggable id="NFT Collection">
-            <div className="draggable-item">NFT Collection</div>
-          </Draggable>
-          <Draggable id="DAO">
-            <div className="draggable-item">DAO</div>
-          </Draggable>
-          <Draggable id="Staking">
-            <div className="draggable-item">Staking</div>
-          </Draggable>
+          <input
+            type="text"
+            placeholder="Search templates..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="search-bar"
+          />
+          {filteredTemplates.map(template => (
+            <Draggable key={template} id={template}>
+              <div className="draggable-item">{template}</div>
+            </Draggable>
+          ))}
         </div>
         <Droppable id="canvas">
           <div className="canvas">
