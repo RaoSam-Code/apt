@@ -1,0 +1,55 @@
+name: Backend CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**' # Only run if changes are made in the backend directory
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend # All commands will run in the backend directory
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'backend/package-lock.json'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests (if any)
+        # You would typically have a test script defined in your backend/package.json
+        # For example: "test": "jest" or "test": "mocha"
+        # If you don't have tests, you can remove or comment out this step.
+        run: npm test || echo "No backend tests found or configured."
+
+      - name: Lint code (if any)
+        # You would typically have a lint script defined in your backend/package.json
+        # For example: "lint": "eslint ."
+        # If you don't have linting, you can remove or comment out this step.
+        run: npm run lint || echo "No backend linting found or configured."
+
+      - name: Build backend (if applicable)
+        # If your backend has a build step (e.g., TypeScript compilation), add it here.
+        # For example: "build": "tsc"
+        run: echo "No specific backend build step configured." # Replace with actual build command if needed
+
+      - name: Archive production artifacts (optional)
+        # If you have build artifacts you want to save, you can use actions/upload-artifact
+        # For example, if your backend builds into a 'dist' folder:
+        # uses: actions/upload-artifact@v3
+        # with:
+        #   name: backend-build-artifacts
+        #   path: backend/dist
+        run: echo "No backend artifacts to archive."

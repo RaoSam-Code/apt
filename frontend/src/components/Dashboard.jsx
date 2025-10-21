@@ -16,9 +16,9 @@ export default function Dashboard() {
 
   return (
     <div style={{ marginTop: "20px" }}>
-      <h2>My Deployed dApps</h2>
+      <h3>My Deployed dApps</h3>
       {projects.length > 0 ? (
-        <ul>
+        <ul className="dashboard-list">
           {projects.map((project) => (
             <li key={project.id}>
               <strong>{project.name}</strong> ({project.type}) -{" "}
@@ -29,7 +29,10 @@ export default function Dashboard() {
               >
                 View Transaction
               </a>
-              <button onClick={() => window.location.href = `${import.meta.env.VITE_BACKEND_URL}/generate-frontend/${project.id}`}>
+              <button 
+                className="primary"
+                onClick={() => window.location.href = `${import.meta.env.VITE_BACKEND_URL}/generate-frontend/${project.id}`}
+              >
                 Download Frontend
               </button>
             </li>

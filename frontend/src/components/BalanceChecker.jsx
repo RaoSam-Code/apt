@@ -35,7 +35,7 @@ export default function BalanceChecker() {
 
   return (
     <div style={{ marginTop: "20px" }}>
-      <h2>Check Token Balance</h2>
+      <h3>Check Token Balance</h3>
       <div className="form-group">
         <label>Module Address</label>
         <input
@@ -45,7 +45,7 @@ export default function BalanceChecker() {
           onChange={(e) => setModuleAddress(e.target.value)}
         />
       </div>
-      <button onClick={fetchBalance}>Get Balance</button>
+      <button onClick={fetchBalance} className="primary">Get Balance</button>
       {balance !== null && <p>Your balance: {balance}</p>}
     </div>
   );

@@ -70,36 +70,44 @@ export default function VisualBuilder() {
 
   return (
     <DndContext onDragEnd={handleDragEnd}>
-      <div className="visual-builder">
+      <div className="visual-builder-container"> {/* New container for layout */}
         <div className="sidebar">
           <h3>Components</h3>
-          <input
-            type="text"
-            placeholder="Search templates..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-bar"
-          />
-          {filteredTemplates.map(template => (
-            <Draggable key={template} id={template}>
-              <div className="draggable-item">{template}</div>
-            </Draggable>
-          ))}
-        </div>
-        <Droppable id="canvas">
-          <div className="canvas">
-            <h3>Canvas</h3>
-            {droppedItems.map((item, index) => (
-              <div key={index} className="dropped-item">
-                {item}
-              </div>
+          <div className="search-bar">
+            <input
+              type="text"
+              placeholder="Search templates..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="components-list">
+            {filteredTemplates.map(template => (
+              <Draggable key={template} id={template}>
+                <div className="draggable-item">{template}</div>
+              </Draggable>
             ))}
           </div>
-        </Droppable>
+        </div>
+        <div className="canvas-deploy-section"> {/* New section for canvas and deploy button */}
+          <Droppable id="canvas">
+            <div className="canvas">
+              <h3>Canvas</h3>
+              {droppedItems.length === 0 && (
+                <p className="canvas-placeholder">Drag and drop components here</p>
+              )}
+              {droppedItems.map((item, index) => (
+                <div key={index} className="dropped-item">
+                  {item}
+                </div>
+              ))}
+            </div>
+          </Droppable>
+          <button className="primary deploy-button" onClick={handleDeploy} disabled={isDeploying || droppedItems.length === 0}>
+            {isDeploying ? 'Deploying...' : 'Deploy Selected dApps'}
+          </button>
+        </div>
       </div>
-      <button className="primary" onClick={handleDeploy} disabled={isDeploying}>
-        {isDeploying ? 'Deploying...' : 'Deploy Contract'}
-      </button>
     </DndContext>
   );
 }
