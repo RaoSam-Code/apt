@@ -1,36 +1,56 @@
-module nft_owner::my_nft {
-    use std::signer;
+module owner::my_nft {
     use std::string::{Self, String};
-    use aptos_token_objects::collection;
-    use aptos_token_objects::token;
+    use std::vector;
+    use std::signer;
+    use aptos_token::token;
 
-    const COLLECTION_NAME: vector<u8> = b"{{COLLECTION_NAME}}";
-    const COLLECTION_DESCRIPTION: vector<u8> = b"{{COLLECTION_DESCRIPTION}}";
-    const COLLECTION_URI: vector<u8> = b"{{COLLECTION_URI}}";
+    const ENOT_ authorized: u64 = 1;
 
-    fun init_module(sender: &signer) {
-        collection::create_collection(
-            sender,
-            string::utf8(COLLECTION_NAME),
-            string::utf8(COLLECTION_DESCRIPTION),
-            string::utf8(COLLECTION_URI),
-            1000, // max supply
-            vector[false, false, false], // mutable flags
+    struct CollectionConfig has key {
+        name: String,
+        uri: String,
+    }
+
+    fun init_module(account: &signer) {
+        let name = string::utf8(b"{{TOKEN_NAME}}");
+        let description = string::utf8(b"An awesome NFT collection created with Visual Builder");
+        let uri = string::utf8(b"https://aptos.dev");
+        let supply = 0; // Infinite supply by default for MVP
+        let mutate_setting = vector<bool>[ false, false, false ];
+
+        token::create_collection(
+            account,
+            name,
+            description,
+            uri,
+            supply,
+            mutate_setting
         );
     }
 
-    public entry fun mint(sender: &signer, token_name: String, token_description: String, token_uri: String) {
-        let collection_creator = signer::address_of(sender);
-        let collection_name = string::utf8(COLLECTION_NAME);
-        let token_creator = token::create_named_token(
-            sender,
-            collection_creator,
-            collection_name,
-            token_name,
-            token_description,
-            token_uri,
+    public entry fun mint_nft(account: &signer, description: String, name: String, uri: String) {
+        let token_data_id = token::create_tokendata(
+            account,
+            string::utf8(b"{{TOKEN_NAME}}"),
+            name,
+            description,
+            0, // Max
+            uri,
+            signer::address_of(account), // Royalty payee
+            100, // Denominator
+            5, // Numerator (5%)
+            token::create_token_mutability_config(
+                &vector<bool>[ false, false, false, false, true ]
+            ),
+            vector::empty<String>(),
+            vector::empty<vector<u8>>(),
+            vector::empty<String>(),
         );
-        // Mint the token to the creator
-        token::mint(sender, token_creator);
+
+        token::mint_token(
+            account,
+            token_data_id,
+            1, // Amount
+        );
     }
 }

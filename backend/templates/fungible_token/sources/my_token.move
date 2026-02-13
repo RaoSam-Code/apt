@@ -1,29 +1,53 @@
-module token_owner::my_token {
-    use std::signer;
+module owner::my_token {
+    use aptos_framework::fungible_asset::{Self, Metadata};
+    use aptos_framework::object::{Self, Object};
+    use aptos_framework::primary_fungible_store;
+    use std::option;
     use std::string::{Self, String};
-    use aptos_framework::coin;
+    use std::signer;
 
-    const TOKEN_NAME: vector<u8> = b"{{TOKEN_NAME}}";
-    const TOKEN_SYMBOL: vector<u8> = b"{{TOKEN_SYMBOL}}";
-    const TOKEN_DECIMALS: u8 = {{TOKEN_DECIMALS}};
-    const INITIAL_SUPPLY: u64 = {{TOKEN_SUPPLY}};
+    /// The token symbol
+    const SYMBOL: vector<u8> = b"{{TOKEN_SYMBOL}}";
+    /// The token name
+    const NAME: vector<u8> = b"{{TOKEN_NAME}}";
+    /// The token decimals
+    const DECIMALS: u8 = 8;
+    /// The token icon URI
+    const ICON_URI: vector<u8> = b"http://example.com/icon.png";
+    /// The token project URI
+    const PROJECT_URI: vector<u8> = b"http://example.com";
 
-    struct MyToken {}
+    // Resources
+    struct TokenConfig has key {
+        mint_ref: fungible_asset::MintRef,
+        burn_ref: fungible_asset::BurnRef,
+        transfer_ref: fungible_asset::TransferRef,
+    }
 
-    fun init_module(sender: &signer) {
-        let (burn_cap, freeze_cap, mint_cap) = coin::initialize<MyToken>(
-            sender,
-            string::utf8(TOKEN_NAME),
-            string::utf8(TOKEN_SYMBOL),
-            TOKEN_DECIMALS,
-            true,
+    /// Initialize the token
+    fun init_module(admin: &signer) {
+        let constructor_ref = &object::create_named_object(admin, SYMBOL);
+        primary_fungible_store::create_primary_store_enabled_fungible_asset(
+            constructor_ref,
+            option::none(),
+            string::utf8(NAME),
+            string::utf8(SYMBOL),
+            DECIMALS,
+            string::utf8(ICON_URI),
+            string::utf8(PROJECT_URI),
         );
 
-        coin::mint(sender, &mint_cap, INITIAL_SUPPLY);
+        let mint_ref = fungible_asset::generate_mint_ref(constructor_ref);
+        let burn_ref = fungible_asset::generate_burn_ref(constructor_ref);
+        let transfer_ref = fungible_asset::generate_transfer_ref(constructor_ref);
 
-        // Store capabilities
-        move_to(sender, burn_cap);
-        move_to(sender, freeze_cap);
-        move_to(sender, mint_cap);
+        move_to(admin, TokenConfig { mint_ref, burn_ref, transfer_ref });
+    }
+
+    /// Mint tokens to a specific account
+    public entry fun mint(admin: &signer, to: address, amount: u64) acquires TokenConfig {
+        let config = borrow_global<TokenConfig>(signer::address_of(admin));
+        let fa = fungible_asset::mint(&config.mint_ref, amount);
+        primary_fungible_store::deposit(to, fa);
     }
 }

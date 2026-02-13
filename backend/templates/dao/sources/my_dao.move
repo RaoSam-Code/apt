@@ -1,28 +1,25 @@
-module dao_owner::my_dao {
+module owner::my_dao {
     use std::signer;
-    use std::string::{Self, String};
-    use aptos_framework::aptos_governance;
-    use aptos_framework::coin;
+    use aptos_framework::account;
+    use aptos_framework::timestamp;
 
-    const DAO_NAME: vector<u8> = b"{{DAO_NAME}}";
-    const PROPOSAL_DELAY: u64 = {{PROPOSAL_DELAY}};
-
-    struct MyDAO {}
-
-    fun init_module(sender: &signer) {
-        aptos_governance::initialize(
-            sender,
-            string::utf8(DAO_NAME),
-            PROPOSAL_DELAY,
-            1000000, // min voting threshold
-        );
+    struct DAOConfig has key {
+        voting_delay: u64,
+        voting_duration: u64,
+        proposal_threshold: u64,
     }
 
-    public entry fun create_proposal(sender: &signer, execution_hash: vector<u8>) {
-        aptos_governance::create_proposal(sender, execution_hash);
+    fun init_module(account: &signer) {
+        move_to(account, DAOConfig {
+            voting_delay: 86400, // 1 day
+            voting_duration: 604800, // 1 week
+            proposal_threshold: 100,
+        });
     }
 
-    public entry fun vote(sender: &signer, proposal_id: u64, should_pass: bool) {
-        aptos_governance::vote(sender, proposal_id, 1, should_pass);
+    public entry fun update_config(account: &signer, new_delay: u64, new_duration: u64) acquires DAOConfig {
+        let config = borrow_global_mut<DAOConfig>(signer::address_of(account));
+        config.voting_delay = new_delay;
+        config.voting_duration = new_duration;
     }
 }

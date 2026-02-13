@@ -1,0 +1,27 @@
+{
+  "name": "aptos-visual-builder",
+  "version": "1.0.0",
+  "description": "Visual Aptos dApp Builder",
+  "scripts": {
+    "start": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd backend && npm start",
+    "client": "cd frontend && npm run dev",
+    "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RaoSam-Code/apt.git"
+  },
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/RaoSam-Code/apt/issues"
+  },
+  "homepage": "https://github.com/RaoSam-Code/apt#readme"
+}
