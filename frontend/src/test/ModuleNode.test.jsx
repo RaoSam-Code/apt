@@ -11,10 +11,15 @@ vi.mock('reactflow', () => ({
 }));
 
 // Mock framer-motion to avoid animation issues in tests
+const motionPropKeys = new Set(['initial', 'animate', 'whileHover', 'whileTap', 'exit', 'transition']);
 vi.mock('framer-motion', () => ({
     motion: {
-        div: ({ children, initial, animate, whileHover, whileTap, ...props }) =>
-            React.createElement('div', props, children),
+        div: (props) => {
+            const domProps = Object.fromEntries(
+                Object.entries(props).filter(([k]) => !motionPropKeys.has(k))
+            );
+            return React.createElement('div', domProps);
+        },
     },
 }));
 
