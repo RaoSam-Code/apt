@@ -3,6 +3,7 @@ import { useNodesState, useEdgesState, addEdge } from 'reactflow';
 
 const BuilderContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useBuilder = () => useContext(BuilderContext);
 
 export const BuilderProvider = ({ children }) => {

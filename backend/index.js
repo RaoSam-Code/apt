@@ -142,6 +142,10 @@ app.post('/deploy-graph', async (req, res) => {
 });
 
 // ... (Rest of existing code, mainly app.listen)
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;

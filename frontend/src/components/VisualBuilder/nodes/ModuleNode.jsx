@@ -3,7 +3,7 @@ import { Handle, Position } from 'reactflow';
 import { Settings, Box } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export default memo(({ data, isConnectable }) => {
+export default memo(function ModuleNode({ data, isConnectable }) {
     return (
         <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
