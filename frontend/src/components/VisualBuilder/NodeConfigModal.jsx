@@ -9,6 +9,7 @@ export default function NodeConfigModal() {
 
     useEffect(() => {
         if (selectedNode) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setFormData(selectedNode.data || {});
         }
     }, [selectedNode]);
